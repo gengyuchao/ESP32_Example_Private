@@ -377,7 +377,7 @@ static void display_pretty_colors(spi_device_handle_t spi)
     int sending_line=-1;
     int calc_line=0;
 
-    while(1) {
+    // while(1) {
         frame++;
  
         for (int y=0; y<240; y+=PARALLEL_LINES) {
@@ -397,8 +397,11 @@ static void display_pretty_colors(spi_device_handle_t spi)
             //background. We can go on to calculate the next line set as long as we do not
             //touch line[sending_line]; the SPI sending process is still reading from that.
         }
-        //vTaskDelay(10);
-    }
+         vTaskDelay(10);
+    // }
+    send_line_finish(spi);
+    free(lines[calc_line]);
+    free(lines[!calc_line]);
 }
 
 uint16_t * Image_buf ;
@@ -431,7 +434,7 @@ void display_clear(uint16_t color)
         printf("Image_buf is NULL :%s\n",__func__);
         return;
     }
-    memset((uint16_t*)Image_buf,color,320*240);
+    memset((uint16_t*)Image_buf,color,320*240*sizeof(uint16_t));
 }
 
 void display_screen(spi_device_handle_t spi)
@@ -450,8 +453,8 @@ void display_screen(spi_device_handle_t spi)
 static inline uint16_t get_Image_pixel(int x, int y)
 {
     //Image has an 8x8 pixel margin, so we can also resolve e.g. [-3, 243]
-    x+=8;
-    y+=8;
+    // x+=8;
+    // y+=8;
     return Image_buf[y*320+x];
 }
 
@@ -459,8 +462,8 @@ static inline uint16_t get_Image_pixel(int x, int y)
 static inline uint16_t set_Image_pixel(int x, int y,uint16_t color)
 {
     //Image has an 8x8 pixel margin, so we can also resolve e.g. [-3, 243]
-    x+=8;
-    y+=8;
+    // x+=8;
+    // y+=8;
     Image_buf[y*320+x] = color;
     return 0;
 }
@@ -580,79 +583,16 @@ void Show_QRcode_Picture(std::string message)
     std::vector<QrSegment> segs =
         QrSegment::makeSegments(message.c_str());
     QrCode qr1 = QrCode::encodeSegments(
-        segs, QrCode::Ecc::HIGH, 5, 10, 2, false);
+        segs, QrCode::Ecc::LOW, 5, 20, 2, false);
 
-
-
-
-    //创建二维码画布(放大)
-    // uint8_t* QrCode_Image=(uint8_t*)malloc(qr1.getSize()*qr1.getSize());
-    // uint8_t* QrCode_Image_BIG=(uint8_t*)malloc(SHOW_SIZE*SHOW_SIZE+1);
-
-    // for (int y = 0; y < qr1.getSize(); y++) {
-    //     for (int x = 0; x < qr1.getSize(); x++) {
-    //         if(qr1.getModule(x, y)==0)
-    //             QrCode_Image[x+y*qr1.getSize()]=0;//display.setPixel(x,y);
-    //         else
-    //             QrCode_Image[x+y*qr1.getSize()]=240;//display.clearPixel(x,y);
-    //     }
-    // }
-
-    // Bilinear(QrCode_Image, qr1.getSize(),qr1.getSize(),QrCode_Image_BIG,SHOW_SIZE,SHOW_SIZE);
-
-    // for (int y = 0; y < SHOW_SIZE; y++) {
-    //     for (int x = 0; x < SHOW_SIZE; x++) {
-    //         if(QrCode_Image_BIG[x+y*SHOW_SIZE]==true)
-    //             display.setPixel(x,y);
-    //         else
-    //             display.clearPixel(x,y);
-    //     }
-    // }
-    // free(QrCode_Image);
-    // free(QrCode_Image_BIG);
-
-
-    // uint16_t* QrCode_Image=(uint16_t*)malloc(qr1.getSize()*qr1.getSize()*sizeof(uint16_t));
-
-
-
-    // for (int y = 0; y < qr1.getSize(); y++) {
-    //     for (int x = 0; x < qr1.getSize(); x++) {
-    //         if(qr1.getModule(x, y)==0)
-    //             QrCode_Image[x+y*qr1.getSize()]=0;//display.setPixel(x,y);
-    //         else
-    //             QrCode_Image[x+y*qr1.getSize()]=0xFFFF;//display.clearPixel(x,y);
-    //     }
-    // }
-
-    // Bilinear(QrCode_Image, qr1.getSize(),qr1.getSize(),10,10,qr1.getSize()*4,qr1.getSize()*4);
-
-    // for (int y = 0; y < SHOW_SIZE; y++) {
-    //     for (int x = 0; x < SHOW_SIZE; x++) {
-    //         // if(QrCode_Image_BIG[x+y*SHOW_SIZE]==true)
-    //         //     set_Image_pixel( x,  y,0);
-    //         // else
-    //         //     set_Image_pixel( x,  y,65535);
-    //         set_Image_pixel( x,  y, QrCode_Image_BIG[x+y*SHOW_SIZE]);
-    //     }
-    // }
-    // free(QrCode_Image);
-
-    float scale=4.0;
-
-    // for (int y = 0; y < qr1.getSize(); y++) {
-    //     for (int x = 0; x < qr1.getSize(); x++) {
-    //         if(qr1.getModule(x, y)==0)
-    //             set_Image_pixel( x,  y,0);
-    //         else
-    //             set_Image_pixel( x,  y,65535);
-    //     }
-    // }
+    float scale=2.0;
+    int offset_x = (320 -qr1.getSize()*scale)/2;
+    int offset_y = (240 -qr1.getSize()*scale)/2;
 
     for (int y = 0; y < qr1.getSize()*scale; y++) {
         for (int x = 0; x < qr1.getSize()*scale; x++) {
 
-            set_Image_pixel( x,  y, (qr1.getModule(x/scale, y/scale)==0?0:65535));
+            set_Image_pixel( offset_x + x, offset_y + y, (qr1.getModule(x/scale, y/scale)==0?0:65535));
           
         }
     }
@@ -697,12 +637,28 @@ static void display_QRCODE(spi_device_handle_t spi)
     }
 }
 
+std::string shenshou=" 　　　┏┓　　　┏┓\n\
+ 　　┏┛┻━━━┛┻┓\n\
+ 　　┃　　　　　　　 ┃\n\
+ 　　┃　　　━　　　 ┃\n\
+ 　　┃　┳┛　┗┳　┃\n\
+ 　　┃　　　　　　　 ┃\n\
+ 　　┃　　　┻　　　 ┃\n\
+ 　　┃　　　　　　　 ┃\n\
+ 　　┗━┓　　　┏━┛\n\
+ 　　　　┃　　　┃    神兽保佑\n\
+ 　　　　┃　　　┃\n\
+ 　　　　┃　　　┗━━━┓\n\
+ 　　　　┃　　　　　 ┣┓\n\
+ 　　　　┃　　　　 ┏┛\n\
+ 　　　　┗┓┓┏━┳┓┏┛\n\
+ 　　　　　┃┫┫　┃┫┫\n\
+ 　　　　　┗┻┛　┗┻┛\n";
 
-void SPI_LCD_init()
+void SPI_LCD_init(spi_device_handle_t *spi)
 {
     esp_err_t ret;
-
-    spi_device_handle_t spi;
+    
     spi_bus_config_t buscfg={0};
 
         buscfg.miso_io_num=(int)PIN_NUM_MISO;
@@ -727,10 +683,10 @@ void SPI_LCD_init()
     ret=spi_bus_initialize(HSPI_HOST, &buscfg, 1);
     ESP_ERROR_CHECK(ret);
     //Attach the LCD to the SPI bus
-    ret=spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
+    ret=spi_bus_add_device(HSPI_HOST, &devcfg, spi);
     ESP_ERROR_CHECK(ret);
     //Initialize the LCD
-    lcd_init(spi);
+    lcd_init(*spi);
     //Initialize the effect displayed
     // ret=pretty_effect_init();
     // ESP_ERROR_CHECK(ret);
@@ -740,17 +696,26 @@ void SPI_LCD_init()
 
     display_Init();
 
+    display_clear(0x2020);
     Show_QRcode_Picture("To the world you may be one person, but to one person you may be the world.");
-    display_screen(spi);
+    display_screen(*spi);
+    // uint16_t count=0;
+    // while(1)
+    // {
+    //     display_clear(count++);
+    //     Show_QRcode_Picture("To the world you may be one person, but to one person you may be the world.");
+    //     display_screen(*spi);
+    //     vTaskDelay(10);
+    // }
+
+    // display_clear(0x0);
+    // display_screen(spi);
+
+    //return spi;
 
 }
 
 
-
-// void display_clear(uint16_t color)
-// {
-//     display_screen();
-// }
 
 extern "C"{
 
@@ -758,8 +723,25 @@ extern "C"{
 void app_main()
 {
     esp_err_t ret;
- 
-    SPI_LCD_init();
+    spi_device_handle_t spi={0};
+    SPI_LCD_init(&spi);
+    uint16_t count=0;
+    while(1)
+    {
+        display_clear(count++);
+        if(count/10%2==0)
+        {
+            Show_QRcode_Picture(shenshou);
+        }
+        else
+        {
+            Show_QRcode_Picture("To the world you may be one person, but to one person you may be the world.");
+        }
+        
+        
+        display_screen(spi);
+        vTaskDelay(10);
+    }
 
 
 }
