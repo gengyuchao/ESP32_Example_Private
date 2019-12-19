@@ -1,7 +1,17 @@
-set(COMPONENT_ADD_INCLUDEDIRS include include)
-set(COMPONENT_SRCDIRS library)
+cmake_minimum_required(VERSION 3.5)
 
-set(COMPONENT_REQUIRES  freertos)
-set(COMPONENT_PRIV_REQUIRES esp8266)
+set(srcs "library/BitBuffer.cpp"
+         "library/QrCode.cpp"
+         "library/QrSegment.cpp"
+         )
 
-register_component()
+
+#set(SUPPORTED_TARGETS esp32)
+#include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+idf_component_register(SRCS ${srcs}
+                    INCLUDE_DIRS include
+                    )
+
+
+#register_component()

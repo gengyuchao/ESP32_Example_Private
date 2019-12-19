@@ -1,6 +1,6 @@
 set(COMPONENT_SRCS "decode_image.c"
                    "pretty_effect.c"
-                   "spi_master_example_main.c")
+                   "spi_master_example_main.cpp")
 set(COMPONENT_ADD_INCLUDEDIRS ".")
 
 
